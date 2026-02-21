@@ -23,8 +23,6 @@
 <canvas id="spriteCanvas" width="800" height="800"></canvas>
 
 <script>
-
-
 const canvas = document.getElementById("spriteCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -40,20 +38,26 @@ const TOTAL_ANIM_FRAMES = pPFrames.length;
 
 const BPM = 170;
 const TICKS_PER_BEAT = 10;
-const TICK_RATE = (BPM / 60) * TICKS_PER_BEAT; 
-const HOLD_TICKS = 2; 
+const TICK_RATE = (BPM / 60) * TICKS_PER_BEAT;
+const HOLD_TICKS = 2;
 
 let audioContext = null;
 let audioBuffer = null;
 let audioStartTime = 0;
+let spriteLoaded = false;
 
 const sprite = new Image();
 sprite.src = "bf-test.png";
+sprite.onload = () => {
+    spriteLoaded = true;
+    console.log("Sprite loaded");
+};
 
-canvas.addEventListener("click", () => {
+canvas.addEventListener("click", async () => {
     if (audioContext) return;
 
     audioContext = new AudioContext();
+    await audioContext.resume();
 
     fetch("song.mp3")
         .then(r => r.arrayBuffer())
@@ -66,11 +70,18 @@ canvas.addEventListener("click", () => {
 }, { once: true });
 
 function start() {
+    if (!spriteLoaded) {
+        console.log("Waiting for sprite...");
+        requestAnimationFrame(start);
+        return;
+    }
+
     const src = audioContext.createBufferSource();
     src.buffer = audioBuffer;
     src.connect(audioContext.destination);
     audioStartTime = audioContext.currentTime;
     src.start();
+
     requestAnimationFrame(drawLoop);
 }
 
@@ -80,12 +91,10 @@ function drawLoop() {
 }
 
 function drawFrame() {
-    if (!audioContext) return;
+    if (!audioContext || !spriteLoaded) return;
 
     const t = audioContext.currentTime - audioStartTime;
-
     const tick = Math.floor(t * TICK_RATE);
-
     const animFrame = Math.floor(tick / HOLD_TICKS) % TOTAL_ANIM_FRAMES;
     const spriteFrame = pPFrames[animFrame];
 
