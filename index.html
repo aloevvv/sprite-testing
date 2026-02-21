@@ -4,18 +4,8 @@
 <meta charset="UTF-8">
 <title>Sprite Test</title>
 <style>
-    body {
-        background: #111;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        margin: 0;
-    }
-    canvas {
-        background: #222;
-        border: 2px solid #555;
-    }
+    body { background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    canvas { background: #222; border: 2px solid #555; }
 </style>
 </head>
 <body>
@@ -30,84 +20,79 @@ const SPRITE_WIDTH = 400;
 const SPRITE_HEIGHT = 400;
 const FRAME_COUNT = 5;
 
-const pPFrames = [];
-for (let i = 0; i < FRAME_COUNT; i++) pPFrames.push(i);
-for (let i = FRAME_COUNT - 2; i > 0; i--) pPFrames.push(i);
-
-const TOTAL_ANIM_FRAMES = pPFrames.length;
+const linearFrames = [0, 1, 2, 3, 4];
+const TOTAL_ANIM_FRAMES = linearFrames.length;
 
 const BPM = 170;
 const TICKS_PER_BEAT = 10;
-const TICK_RATE = (BPM / 60) * TICKS_PER_BEAT;
-const HOLD_TICKS = 2;
+const TICK_RATE = (BPM / 60) * TICKS_PER_BEAT; 
+const HOLD_TICKS = 2; 
 
 let audioContext = null;
 let audioBuffer = null;
 let audioStartTime = 0;
-let spriteLoaded = false;
+let currentKey = null;
 
 const sprite = new Image();
 sprite.src = "bf-test.png";
-sprite.onload = () => {
-    spriteLoaded = true;
-    console.log("Sprite loaded");
+
+const poses = {
+    "ARROWUP": new Image(),
+    "ARROWDOWN": new Image(),
+    "ARROWLEFT": new Image(),
+    "ARROWRIGHT": new Image()
 };
+poses.ARROWUP.src = "bf_up.png";
+poses.ARROWDOWN.src = "bf_down.png";
+poses.ARROWLEFT.src = "bf_left.png";
+poses.ARROWRIGHT.src = "bf_right.png";
 
-canvas.addEventListener("click", async () => {
+window.addEventListener("keydown", (e) => { currentKey = e.key.toUpperCase(); });
+window.addEventListener("keyup", () => { currentKey = null; });
+
+canvas.addEventListener("click", () => {
     if (audioContext) return;
-
     audioContext = new AudioContext();
-    await audioContext.resume();
-
     fetch("song.mp3")
         .then(r => r.arrayBuffer())
         .then(buf => audioContext.decodeAudioData(buf))
         .then(decoded => {
             audioBuffer = decoded;
             start();
-        })
-        .catch(err => console.error("Audio load error:", err));
+        });
 }, { once: true });
 
 function start() {
-    if (!spriteLoaded) {
-        console.log("Waiting for sprite...");
-        requestAnimationFrame(start);
-        return;
-    }
-
     const src = audioContext.createBufferSource();
     src.buffer = audioBuffer;
     src.connect(audioContext.destination);
     audioStartTime = audioContext.currentTime;
     src.start();
-
-    requestAnimationFrame(drawLoop);
-}
-
-function drawLoop() {
-    drawFrame();
-    requestAnimationFrame(drawLoop);
+    setInterval(drawFrame, 1); 
 }
 
 function drawFrame() {
-    if (!audioContext || !spriteLoaded) return;
+    if (!audioContext) return;
 
     const t = audioContext.currentTime - audioStartTime;
-    const tick = Math.floor(t * TICK_RATE);
-    const animFrame = Math.floor(tick / HOLD_TICKS) % TOTAL_ANIM_FRAMES;
-    const spriteFrame = pPFrames[animFrame];
-
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(
-        sprite,
-        spriteFrame * SPRITE_WIDTH, 0,
-        SPRITE_WIDTH, SPRITE_HEIGHT,
-        0, 0,
-        SPRITE_WIDTH, SPRITE_HEIGHT
-    );
+
+    if (currentKey && poses[currentKey]) {
+        ctx.drawImage(poses[currentKey], 0, 0, 800, 800);
+    } else {
+        const tick = Math.floor(t * TICK_RATE);
+        const animFrame = Math.floor(tick / HOLD_TICKS) % TOTAL_ANIM_FRAMES;
+        const spriteFrame = linearFrames[animFrame];
+
+        ctx.drawImage(
+            sprite,
+            spriteFrame * SPRITE_WIDTH, 0,
+            SPRITE_WIDTH, SPRITE_HEIGHT,
+            0, 0,
+            800, 800
+        );
+    }
 }
 </script>
-
 </body>
 </html>
