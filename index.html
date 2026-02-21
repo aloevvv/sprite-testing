@@ -50,16 +50,20 @@ let audioStartTime = 0;
 const sprite = new Image();
 sprite.src = "bf-test.png";
 
-fetch("song.mp3") 
-    .then(r => r.arrayBuffer())
-    .then(buf => {
-        audioContext = new AudioContext();
-        return audioContext.decodeAudioData(buf);
-    })
-    .then(decoded => {
-        audioBuffer = decoded;
-        start();
-    });
+canvas.addEventListener("click", () => {
+    if (audioContext) return;
+
+    audioContext = new AudioContext();
+
+    fetch("song.mp3")
+        .then(r => r.arrayBuffer())
+        .then(buf => audioContext.decodeAudioData(buf))
+        .then(decoded => {
+            audioBuffer = decoded;
+            start();
+        })
+        .catch(err => console.error("Audio load error:", err));
+}, { once: true });
 
 function start() {
     const src = audioContext.createBufferSource();
