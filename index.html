@@ -12,7 +12,6 @@
         height: 100vh;
         margin: 0;
     }
-
     canvas {
         background: #222;
         border: 2px solid #555;
@@ -25,6 +24,7 @@
 
 <script>
 
+
 const canvas = document.getElementById("spriteCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -32,50 +32,68 @@ const SPRITE_WIDTH = 400;
 const SPRITE_HEIGHT = 400;
 const FRAME_COUNT = 5;
 
-const FPS = 28.33;
-const FRAME_DURATION = 1000 / FPS; 
-const HOLD_FRAMES = 2; 
+const pPFrames = [];
+for (let i = 0; i < FRAME_COUNT; i++) pPFrames.push(i);
+for (let i = FRAME_COUNT - 2; i > 0; i--) pPFrames.push(i);
 
-let sprite = new Image();
+const TOTAL_ANIM_FRAMES = pPFrames.length;
+
+const BPM = 170;
+const TICKS_PER_BEAT = 10;
+const TICK_RATE = (BPM / 60) * TICKS_PER_BEAT; 
+const HOLD_TICKS = 2; 
+
+let audioContext = null;
+let audioBuffer = null;
+let audioStartTime = 0;
+
+const sprite = new Image();
 sprite.src = "bf-test.png";
 
-let currentFrame = 0; 
-let tick = 0;  
-let lastTime = 0;
+fetch("song.mp3") 
+    .then(r => r.arrayBuffer())
+    .then(buf => {
+        audioContext = new AudioContext();
+        return audioContext.decodeAudioData(buf);
+    })
+    .then(decoded => {
+        audioBuffer = decoded;
+        start();
+    });
 
-function animate(timestamp) {
-    if (!lastTime) lastTime = timestamp;
-    const delta = timestamp - lastTime;
-
-    if (delta >= FRAME_DURATION) {
-        tick++;
-
-        if (tick >= HOLD_FRAMES) {
-            currentFrame = (currentFrame + 1) % FRAME_COUNT;
-            tick = 0;
-        }
-
-        lastTime = timestamp;
-    }
-
-    draw();
-    requestAnimationFrame(animate);
+function start() {
+    const src = audioContext.createBufferSource();
+    src.buffer = audioBuffer;
+    src.connect(audioContext.destination);
+    audioStartTime = audioContext.currentTime;
+    src.start();
+    requestAnimationFrame(drawLoop);
 }
 
-function draw() {
+function drawLoop() {
+    drawFrame();
+    requestAnimationFrame(drawLoop);
+}
+
+function drawFrame() {
+    if (!audioContext) return;
+
+    const t = audioContext.currentTime - audioStartTime;
+
+    const tick = Math.floor(t * TICK_RATE);
+
+    const animFrame = Math.floor(tick / HOLD_TICKS) % TOTAL_ANIM_FRAMES;
+    const spriteFrame = pPFrames[animFrame];
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(
         sprite,
-        currentFrame * SPRITE_WIDTH, 0, 
-        SPRITE_WIDTH, SPRITE_HEIGHT,  
-        0, 0,            
-        SPRITE_WIDTH, SPRITE_HEIGHT      
+        spriteFrame * SPRITE_WIDTH, 0,
+        SPRITE_WIDTH, SPRITE_HEIGHT,
+        0, 0,
+        SPRITE_WIDTH, SPRITE_HEIGHT
     );
 }
-
-sprite.onload = () => {
-    requestAnimationFrame(animate);
-};
 </script>
 
 </body>
