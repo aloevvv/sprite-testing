@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sprite Test</title>
+<style>
+    body {
+        background: #111;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+    }
+
+    canvas {
+        background: #222;
+        border: 2px solid #555;
+    }
+</style>
+</head>
+<body>
+
+<canvas id="spriteCanvas" width="800" height="800"></canvas>
+
+<script>
+
+const canvas = document.getElementById("spriteCanvas");
+const ctx = canvas.getContext("2d");
+
+const SPRITE_WIDTH = 400;
+const SPRITE_HEIGHT = 400;
+const FRAME_COUNT = 5;
+
+const FPS = 28.33;
+const FRAME_DURATION = 1000 / FPS; 
+const HOLD_FRAMES = 2; 
+
+let sprite = new Image();
+sprite.src = "bf-test.png";
+
+let currentFrame = 0; 
+let tick = 0;  
+let lastTime = 0;
+
+function animate(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+    const delta = timestamp - lastTime;
+
+    if (delta >= FRAME_DURATION) {
+        tick++;
+
+        if (tick >= HOLD_FRAMES) {
+            currentFrame = (currentFrame + 1) % FRAME_COUNT;
+            tick = 0;
+        }
+
+        lastTime = timestamp;
+    }
+
+    draw();
+    requestAnimationFrame(animate);
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(
+        sprite,
+        currentFrame * SPRITE_WIDTH, 0, 
+        SPRITE_WIDTH, SPRITE_HEIGHT,  
+        0, 0,            
+        SPRITE_WIDTH, SPRITE_HEIGHT      
+    );
+}
+
+sprite.onload = () => {
+    requestAnimationFrame(animate);
+};
+</script>
+
+</body>
+</html>
