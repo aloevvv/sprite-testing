@@ -18,37 +18,52 @@ const ctx = canvas.getContext("2d");
 
 const SPRITE_WIDTH = 500;
 const SPRITE_HEIGHT = 500;
-const FRAME_COUNT = 5;
 
 const linearFrames = [0, 1, 2, 3, 4];
 const TOTAL_ANIM_FRAMES = linearFrames.length;
 
 const BPM = 170;
 const TICKS_PER_BEAT = 10;
-const TICK_RATE = (BPM / 60) * TICKS_PER_BEAT; 
-const HOLD_TICKS = 4; 
+const TICK_RATE = (BPM / 60) * TICKS_PER_BEAT;
+const HOLD_TICKS = 4;
 
 let audioContext = null;
 let audioBuffer = null;
 let audioStartTime = 0;
+
 let currentKey = null;
+let lastPoseFrame = null;
+let poseUntil = 0;
+const MIN_HOLD = 0.12; 
 
 const sprite = new Image();
-sprite.src = "bf-testing.png";
+sprite.src = "bf-test.png";
 
 const keyFrames = {
     "ARROWLEFT": 5,
-    "ARROWUP": 6,
+    "ARROWUP": 6, 
     "ARROWRIGHT": 7,
-    "ARROWDOWN": 8
+    "ARROWDOWN": 8 
 };
 
-window.addEventListener("keydown", (e) => { currentKey = e.key.toUpperCase(); });
-window.addEventListener("keyup", () => { currentKey = null; });
+window.addEventListener("keydown", (e) => {
+    const key = e.key.toUpperCase();
+    if (keyFrames[key] !== undefined) {
+        currentKey = key;
+        poseUntil = audioContext.currentTime + MIN_HOLD;
+        lastPoseFrame = keyFrames[key];
+    }
+});
+
+window.addEventListener("keyup", () => {
+    currentKey = null;
+});
 
 canvas.addEventListener("click", () => {
     if (audioContext) return;
+
     audioContext = new AudioContext();
+
     fetch("song.mp3")
         .then(r => r.arrayBuffer())
         .then(buf => audioContext.decodeAudioData(buf))
@@ -64,6 +79,7 @@ function start() {
     src.connect(audioContext.destination);
     audioStartTime = audioContext.currentTime;
     src.start();
+
     setInterval(drawFrame, 1);
 }
 
@@ -84,21 +100,22 @@ function drawSpriteFrame(frameIndex) {
 function drawFrame() {
     if (!audioContext) return;
 
-    const t = audioContext.currentTime - audioStartTime;
+    const now = audioContext.currentTime;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (currentKey && keyFrames[currentKey] !== undefined) {
-        drawSpriteFrame(keyFrames[currentKey]);
+    if (currentKey || now < poseUntil) {
+        const frame = currentKey ? keyFrames[currentKey] : lastPoseFrame;
+        drawSpriteFrame(frame);
         return;
     }
 
+    const t = now - audioStartTime;
     const tick = Math.floor(t * TICK_RATE);
     const animFrame = Math.floor(tick / HOLD_TICKS) % TOTAL_ANIM_FRAMES;
     const spriteFrame = linearFrames[animFrame];
 
     drawSpriteFrame(spriteFrame);
 }
-
 </script>
 </body>
 </html>
