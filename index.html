@@ -16,8 +16,8 @@
 const canvas = document.getElementById("spriteCanvas");
 const ctx = canvas.getContext("2d");
 
-const SPRITE_WIDTH = 400;
-const SPRITE_HEIGHT = 400;
+const SPRITE_WIDTH = 500;
+const SPRITE_HEIGHT = 500;
 const FRAME_COUNT = 5;
 
 const linearFrames = [0, 1, 2, 3, 4];
@@ -34,18 +34,14 @@ let audioStartTime = 0;
 let currentKey = null;
 
 const sprite = new Image();
-sprite.src = "bf-test.png";
+sprite.src = "bf-testing.png";
 
-const poses = {
-    "ARROWUP": new Image(),
-    "ARROWDOWN": new Image(),
-    "ARROWLEFT": new Image(),
-    "ARROWRIGHT": new Image()
+const keyFrames = {
+    "ARROWLEFT": 6,
+    "ARROWUP": 7,
+    "ARROWRIGHT": 8,
+    "ARROWDOWN": 9
 };
-poses.ARROWUP.src = "bf_up.png";
-poses.ARROWDOWN.src = "bf_down.png";
-poses.ARROWLEFT.src = "bf_left.png";
-poses.ARROWRIGHT.src = "bf_right.png";
 
 window.addEventListener("keydown", (e) => { currentKey = e.key.toUpperCase(); });
 window.addEventListener("keyup", () => { currentKey = null; });
@@ -68,7 +64,21 @@ function start() {
     src.connect(audioContext.destination);
     audioStartTime = audioContext.currentTime;
     src.start();
-    setInterval(drawFrame, 1); 
+    setInterval(drawFrame, 1);
+}
+
+function drawSpriteFrame(frameIndex) {
+    const cols = 4;
+    const sx = (frameIndex % cols) * SPRITE_WIDTH;
+    const sy = Math.floor(frameIndex / cols) * SPRITE_HEIGHT;
+
+    ctx.drawImage(
+        sprite,
+        sx, sy,
+        SPRITE_WIDTH, SPRITE_HEIGHT,
+        0, 0,
+        800, 800
+    );
 }
 
 function drawFrame() {
@@ -77,22 +87,18 @@ function drawFrame() {
     const t = audioContext.currentTime - audioStartTime;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (currentKey && poses[currentKey]) {
-        ctx.drawImage(poses[currentKey], 0, 0, 800, 800);
-    } else {
-        const tick = Math.floor(t * TICK_RATE);
-        const animFrame = Math.floor(tick / HOLD_TICKS) % TOTAL_ANIM_FRAMES;
-        const spriteFrame = linearFrames[animFrame];
-
-        ctx.drawImage(
-            sprite,
-            spriteFrame * SPRITE_WIDTH, 0,
-            SPRITE_WIDTH, SPRITE_HEIGHT,
-            0, 0,
-            800, 800
-        );
+    if (currentKey && keyFrames[currentKey] !== undefined) {
+        drawSpriteFrame(keyFrames[currentKey]);
+        return;
     }
+
+    const tick = Math.floor(t * TICK_RATE);
+    const animFrame = Math.floor(tick / HOLD_TICKS) % TOTAL_ANIM_FRAMES;
+    const spriteFrame = linearFrames[animFrame];
+
+    drawSpriteFrame(spriteFrame);
 }
+
 </script>
 </body>
 </html>
