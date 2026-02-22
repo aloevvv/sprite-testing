@@ -10,7 +10,7 @@
 </head>
 <body>
 
-<canvas id="spriteCanvas" width="800" height="800"></canvas>
+<canvas id="spriteCanvas"></canvas>
 
 <script>
 const canvas = document.getElementById("spriteCanvas");
@@ -33,6 +33,10 @@ let audioBuffer = null;
 let audioStartTime = 0;
 let currentKey = null;
 
+let poseUntil = 0;
+let lastPoseFrame = null;
+const MIN_HOLD = 0.12;
+
 const sprite = new Image();
 sprite.src = "bf-testing.png";
 
@@ -43,8 +47,20 @@ const keyFrames = {
     "ARROWDOWN": 8
 };
 
-window.addEventListener("keydown", (e) => { currentKey = e.key.toUpperCase(); });
-window.addEventListener("keyup", () => { currentKey = null; });
+window.addEventListener("keydown", (e) => {
+    if (!audioContext) return;
+
+    const key = e.key.toUpperCase();
+    if (keyFrames[key] !== undefined) {
+        currentKey = key;
+        lastPoseFrame = keyFrames[key];
+        poseUntil = audioContext.currentTime + MIN_HOLD;
+    }
+});
+
+window.addEventListener("keyup", () => {
+    currentKey = null;
+});
 
 canvas.addEventListener("click", () => {
     if (audioContext) return;
@@ -84,21 +100,28 @@ function drawSpriteFrame(frameIndex) {
 function drawFrame() {
     if (!audioContext) return;
 
-    const t = audioContext.currentTime - audioStartTime;
+    const nowAbs = audioContext.currentTime;
+    const t = nowAbs - audioStartTime;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (currentKey && keyFrames[currentKey] !== undefined) {
-        drawSpriteFrame(keyFrames[currentKey]);
+        const frame = keyFrames[currentKey];
+        lastPoseFrame = frame;
+        poseUntil = nowAbs + MIN_HOLD;
+        drawSpriteFrame(frame);
         return;
     }
 
+    if (nowAbs < poseUntil && lastPoseFrame !== null) {
+        drawSpriteFrame(lastPoseFrame);
+        return;
+    }
     const tick = Math.floor(t * TICK_RATE);
     const animFrame = Math.floor(tick / HOLD_TICKS) % TOTAL_ANIM_FRAMES;
     const spriteFrame = linearFrames[animFrame];
 
     drawSpriteFrame(spriteFrame);
 }
-
 </script>
 </body>
 </html>
